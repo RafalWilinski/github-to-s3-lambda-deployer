@@ -3,7 +3,7 @@ const http = require('axios');
 const AWS = require('aws-sdk');
 
 const path = 'static/';
-const bucketName = 'rwilinski.me';
+const bucketName = process.env.BUCKET_NAME;
 const storageClass = 'REDUCED_REDUNDANCY'; // STANDARD | REDUCED_REDUNDANCY | STANDARD_IA
 
 const confirmationTopicArn = process.env.AWS_CONFIRMATION_SNS_TOPIC_ANR;

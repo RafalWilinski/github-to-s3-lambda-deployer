@@ -4,7 +4,11 @@
   "description": "AWS Lambda function which reacts to SNS subscription when new commit is pushed to master branch and deploys new version to S3.",
   "main": "app.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dry-run": "node-lambda run",
+    "deploy": "node-lambda deploy",
+    "setup": "node-lambda setup",
+    "package": "node-lambda package"
   },
   "keywords": [
     "aws",
