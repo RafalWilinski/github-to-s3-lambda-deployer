@@ -1,0 +1,22 @@
+{
+  "name": "github-to-s3-lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda function which reacts to SNS subscription when new commit is pushed to master branch and deploys new version to S3.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "github",
+    "s3",
+    "deploy"
+  ],
+  "author": "Rafal Wilinski",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.12.0",
+    "node-lambda": "^0.8.6"
+  }
+}

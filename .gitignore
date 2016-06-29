@@ -1,0 +1,5 @@
+.env
+node_modules
+deploy.env
+event.json
+context.json
