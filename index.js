@@ -4,12 +4,35 @@ const AWS = require('aws-sdk');
 
 const path = 'static/';
 const bucketName = 'rwilinski.me';
+const storageClass = 'REDUCED_REDUNDANCY'; // STANDARD | REDUCED_REDUNDANCY | STANDARD_IA
 
+const confirmationTopicArn = process.env.AWS_CONFIRMATION_SNS_TOPIC_ANR;
+const mailMessage = `Deploy to ${bucketName}/${path} succeeded!`;
+const mailSubject = 'Deploy succeeded';
+
+const sns = new AWS.SNS();
 const s3 = new AWS.S3({
   params: {
     Bucket: bucketName
   }
 });
+
+const confirmUpload = (callback) => {
+  sns.publish({
+    Message: mailMessage,
+    Subject: mailSubject,
+    TopicArn: confirmationTopicArn,
+    MessageAttributes: {
+      someKey: {
+        DataType: 'String',
+        StringValue: 'Test'
+      }
+    }
+  }, (err, data) => {
+    if (err) callback(err, 'Failed to send confirmation');
+    else callback(null, 'Done!');
+  });
+};
 
 const putFileToS3 = (fileObject) => new Promise((resolve, reject) => {
   http.get(fileObject.download_url)
@@ -17,7 +40,8 @@ const putFileToS3 = (fileObject) => new Promise((resolve, reject) => {
     s3.putObject({
       Bucket: bucketName,
       Key: fileObject.name,
-      Body: payload.data
+      Body: payload.data,
+      StorageClass: storageClass
     }, (error, data) => {
       if (error) {
         return reject(error);
@@ -39,7 +63,8 @@ exports.handler = (event, context, callback) => {
       processed++;
       console.log(`Progress: ${processed} out of ${totalCount}`);
       if (processed === totalCount) {
-        callback(null, 'Done!');
+        if (confirmationTopicArn) confirmUpload(callback);
+        else callback(null, 'Done!');
       }
     }
 
