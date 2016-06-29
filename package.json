@@ -16,6 +16,7 @@
   "author": "Rafal Wilinski",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.4.3",
     "axios": "^0.12.0",
     "node-lambda": "^0.8.6"
   }
