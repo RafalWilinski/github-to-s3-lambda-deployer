@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dry-run": "node-lambda run",
-    "deploy": "node-lambda deploy",
+    "deploy": "node-lambda deploy --configFile deploy.env",
     "setup": "node-lambda setup",
     "package": "node-lambda package"
   },
