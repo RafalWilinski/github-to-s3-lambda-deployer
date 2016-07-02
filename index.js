@@ -1,6 +1,7 @@
 'use strict';
-const http = require('axios');
+const request = require('request');
 const AWS = require('aws-sdk');
+const fs = require('fs');
 
 const path = 'static/';
 const bucketName = process.env.BUCKET_NAME;
@@ -36,12 +37,6 @@ const confirmUpload = (callback) => {
     Message: mailMessage,
     Subject: mailSubject,
     TopicArn: confirmationTopicArn,
-    MessageAttributes: {
-      someKey: {
-        DataType: 'String',
-        StringValue: 'Test'
-      }
-    }
   }, (err, data) => {
     if (err) callback(err, 'Failed to send confirmation');
     else callback(null, 'Done!');
@@ -49,25 +44,19 @@ const confirmUpload = (callback) => {
 };
 
 const putFileToS3 = (fileObject) => new Promise((resolve, reject) => {
-  http.get(fileObject.download_url)
-  .then((payload) => {
-    s3.putObject({
+  request(fileObject.download_url)
+  .pipe(fs.createWriteStream(fileObject.name))
+  .on('finish', () => {
+    s3.upload({
       Bucket: bucketName,
+      Key: fileObject.name,
+      Body: fs.createReadStream(fileObject.name),
       ACL: 'public-read',
       ContentType: computeContentType(fileObject.name),
-      Key: fileObject.name,
-      Body: payload.data,
-      StorageClass: storageClass
     }, (error, data) => {
-      if (error) {
-        return reject(error);
-      } else {
-        return resolve(data);
-      }
+      if (error) throw new Error(error);
+      else console.log(data);
     });
-  })
-  .catch((error) => {
-    return reject(error);
   });
 });
 
@@ -84,19 +73,16 @@ exports.handler = (event, context, callback) => {
       }
     }
 
-    http.get(downloadsUrl, {
+    request({
+      uri: downloadsUrl,
       headers: {
         'User-Agent': 'AWS Lambda Function' // Without that Github will reject all requests
       }
-    })
-    .then((payload) => {
-      payload.data.forEach((fileObject) => {
+    }, (error, response, body) => {
+      JSON.parse(body).forEach((fileObject) => {
         putFileToS3(fileObject)
         .then(() => updateProgress(payload.data.length))
         .catch((error) => callback(error, `Error while uploading ${fileObject.name} file to S3`));
       });
-    })
-    .catch((error) => {
-      callback(error, 'Failed to get files in repository.');
     });
 };
