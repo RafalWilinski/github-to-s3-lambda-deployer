@@ -54,8 +54,8 @@ const putFileToS3 = (fileObject) => new Promise((resolve, reject) => {
       ACL: 'public-read',
       ContentType: computeContentType(fileObject.name),
     }, (error, data) => {
-      if (error) throw new Error(error);
-      else console.log(data);
+      if (error) return reject();
+      else return resolve();
     });
   });
 });
