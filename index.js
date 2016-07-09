@@ -45,12 +45,12 @@ const confirmUpload = (callback) => {
 
 const putFileToS3 = (fileObject) => new Promise((resolve, reject) => {
   request(fileObject.download_url)
-  .pipe(fs.createWriteStream(fileObject.name))
+  .pipe(fs.createWriteStream(`/tmp/${fileObject.name}`))
   .on('finish', () => {
     s3.upload({
       Bucket: bucketName,
       Key: fileObject.name,
-      Body: fs.createReadStream(fileObject.name),
+      Body: fs.createReadStream(`/tmp/${fileObject.name}`),
       ACL: 'public-read',
       ContentType: computeContentType(fileObject.name),
     }, (error, data) => {
@@ -81,7 +81,7 @@ exports.handler = (event, context, callback) => {
     }, (error, response, body) => {
       JSON.parse(body).forEach((fileObject) => {
         putFileToS3(fileObject)
-        .then(() => updateProgress(payload.data.length))
+        .then(() => updateProgress(JSON.parse(body).length))
         .catch((error) => callback(error, `Error while uploading ${fileObject.name} file to S3`));
       });
     });
