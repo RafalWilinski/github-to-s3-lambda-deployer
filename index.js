@@ -5,7 +5,6 @@ const fs = require('fs');
 
 const path = 'static/';
 const bucketName = process.env.BUCKET_NAME;
-const storageClass = 'STANDARD'; // STANDARD | REDUCED_REDUNDANCY | STANDARD_IA
 
 const confirmationTopicArn = process.env.AWS_CONFIRMATION_SNS_TOPIC_ANR;
 const mailMessage = `Deploy to ${bucketName}/${path} succeeded!`;
@@ -37,7 +36,7 @@ const confirmUpload = (callback) => {
     Message: mailMessage,
     Subject: mailSubject,
     TopicArn: confirmationTopicArn,
-  }, (err, data) => {
+  }, (err) => {
     if (err) callback(err, 'Failed to send confirmation');
     else callback(null, 'Done!');
   });
@@ -52,8 +51,9 @@ const putFileToS3 = (fileObject) => new Promise((resolve, reject) => {
       Key: fileObject.name,
       Body: fs.createReadStream(`/tmp/${fileObject.name}`),
       ACL: 'public-read',
+      CacheControl: 'max-age=31536000',
       ContentType: computeContentType(fileObject.name),
-    }, (error, data) => {
+    }, (error) => {
       if (error) return reject();
       else return resolve();
     });
@@ -61,28 +61,28 @@ const putFileToS3 = (fileObject) => new Promise((resolve, reject) => {
 });
 
 exports.handler = (event, context, callback) => {
-    const downloadsUrl = JSON.parse(event.Records[0].Sns.Message).repository.contents_url.replace('{+path}', path);
-    let processed = 0;
+  const downloadsUrl = JSON.parse(event.Records[0].Sns.Message).repository.contents_url.replace('{+path}', path);
+  let processed = 0;
 
-    const updateProgress = (totalCount) => {
-      processed++;
-      console.log(`Progress: ${processed} out of ${totalCount}`);
-      if (processed === totalCount) {
-        if (confirmationTopicArn) confirmUpload(callback);
-        else callback(null, 'Done!');
-      }
+  const updateProgress = (totalCount) => {
+    processed++;
+    console.log(`Progress: ${processed} out of ${totalCount}`);
+    if (processed === totalCount) {
+      if (confirmationTopicArn) confirmUpload(callback);
+      else callback(null, 'Done!');
     }
+  };
 
-    request({
-      uri: downloadsUrl,
-      headers: {
-        'User-Agent': 'AWS Lambda Function' // Without that Github will reject all requests
-      }
-    }, (error, response, body) => {
-      JSON.parse(body).forEach((fileObject) => {
-        putFileToS3(fileObject)
-        .then(() => updateProgress(JSON.parse(body).length))
-        .catch((error) => callback(error, `Error while uploading ${fileObject.name} file to S3`));
-      });
+  request({
+    uri: downloadsUrl,
+    headers: {
+      'User-Agent': 'AWS Lambda Function' // Without that Github will reject all requests
+    }
+  }, (error, response, body) => {
+    JSON.parse(body).forEach((fileObject) => {
+      putFileToS3(fileObject)
+      .then(() => updateProgress(JSON.parse(body).length))
+      .catch((error) => callback(error, `Error while uploading ${fileObject.name} file to S3`));
     });
+  });
 };
