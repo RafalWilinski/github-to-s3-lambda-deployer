@@ -2,6 +2,7 @@
 const request = require('request');
 const AWS = require('aws-sdk');
 const fs = require('fs');
+const zlib = require('zlib');
 
 const path = 'static/';
 const bucketName = process.env.BUCKET_NAME;
@@ -43,21 +44,25 @@ const confirmUpload = (callback) => {
 };
 
 const putFileToS3 = (fileObject) => new Promise((resolve, reject) => {
+  const gzip = zlib.createGzip();
+
   request(fileObject.download_url)
-  .pipe(fs.createWriteStream(`/tmp/${fileObject.name}`))
-  .on('finish', () => {
-    s3.upload({
-      Bucket: bucketName,
-      Key: fileObject.name,
-      Body: fs.createReadStream(`/tmp/${fileObject.name}`),
-      ACL: 'public-read',
-      CacheControl: 'max-age=31536000',
-      ContentType: computeContentType(fileObject.name),
-    }, (error) => {
-      if (error) return reject();
-      else return resolve();
+    .pipe(gzip)
+    .pipe(fs.createWriteStream(`/tmp/${fileObject.name}`))
+    .on('finish', () => {
+      s3.upload({
+        Bucket: bucketName,
+        Key: fileObject.name,
+        Body: fs.createReadStream(`/tmp/${fileObject.name}`),
+        ACL: 'public-read',
+        CacheControl: 'max-age=31536000',
+        ContentType: computeContentType(fileObject.name),
+        ContentEncoding: 'gzip',
+      }, (error) => {
+        if (error) return reject();
+        else return resolve();
+      });
     });
-  });
 });
 
 exports.handler = (event, context, callback) => {
